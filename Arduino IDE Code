@@ -1,0 +1,95 @@
+#include <DHT.h> // include the DHT library
+#include <SoftwareSerial.h>
+#define DHTPIN 31 // define the pin where the sensor is connected
+#define DHTTYPE DHT11 // define the sensor type
+int flame = A0;
+int sensorPin = A1;
+const int relayPin = 36;
+// gsm 
+SoftwareSerial gsmSerial(32,33); // RX, TX pins
+const char* phoneNumber = "+919600014485";
+
+//const char* message = "Alert!! Fire is detected ";
+
+DHT dht(DHTPIN, DHTTYPE); // create a DHT object
+
+void setup() {
+  Serial.begin(9600); // initialize serial communication
+  dht.begin(); 
+  pinMode(flame, INPUT);// initialize the sensor
+
+  //gsm
+  gsmSerial.begin(9600);
+
+  //relay
+  pinMode(relayPin, OUTPUT);
+}
+
+void loop() {
+  delay(2000); // wait for 2 seconds between readings
+
+  float temperature = dht.readTemperature(); // read the temperature
+  float humidity = dht.readHumidity(); // read the humidity
+
+// mq2 sensor
+
+  int gas = analogRead(sensorPin);   // Read the analog sensor value
+
+  // flame sensor
+
+  int flame = analogRead(flame); // Read the value from the flame sensor pin
+  //Serial.println(flame); 
+  
+
+  // Turn on the LED if the sensor value is greater than a threshold
+  if (gas > 500 || temperature > 35 || flame > 400)
+  {
+
+      if(temperature>35)
+      {
+          Serial.println("Sending SMS...");
+          gsmSerial.println("AT+CMGF=1"); // Set SMS mode to text
+          delay(1000);
+          gsmSerial.print("AT+CMGS=\"");
+          gsmSerial.print(phoneNumber);
+          gsmSerial.println("\"");
+          delay(1000);
+          gsmSerial.print("The temperature at the plant is rising");
+          gsmSerial.write((byte)26); // Send SMS message
+          delay(5000); // Wait for SMS to be sent
+          Serial.println("SMS sent!");
+          delay(10000);
+
+
+          digitalWrite(relayPin, HIGH);
+          delay(5000);
+      }
+      else
+      {
+        Serial.println("Sending SMS...");
+        gsmSerial.println("AT+CMGF=1"); // Set SMS mode to text
+        delay(1000);
+        gsmSerial.print("AT+CMGS=\"");
+        gsmSerial.print(phoneNumber);
+        gsmSerial.println("\"");
+        delay(1000);
+        gsmSerial.print("Alert! Fire is detected");
+        gsmSerial.write((byte)26); // Send SMS message
+        delay(5000); // Wait for SMS to be sent
+        Serial.println("SMS sent!");
+        delay(10000);
+
+
+        // relay module
+
+        digitalWrite(relayPin, HIGH);
+        delay(5000);
+
+      }
+  }
+  /*else
+  {
+    digitalWrite(relayPin, LOW);
+    // delay(1000);
+  }*/
+  delay(1000);
